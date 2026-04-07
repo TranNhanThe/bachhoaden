@@ -18,21 +18,45 @@ export class ProductsService {
     // return { message: 'Đã thêm hàng mới vào kho!', data: createProductDto };
   }
 
- findAll(): IProduct[] {
+  findAll(): IProduct[] {
     return this.products;
   }
 
   findOne(id: string): IProduct {
-    const product = this.products.find(p => p.id === id);
+    const product = this.products.find((p) => p.id === id);
     if (!product) throw new NotFoundException('Không tìm thấy hàng này!');
     return product;
   }
 
   update(id: string, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+    const index = this.products.findIndex((p) => p.id === id);
+
+    if (index === -1) {
+      throw new NotFoundException(
+        `Không tìm thấy hàng có ID ${id} để cập nhật!`,
+      );
+    }
+
+    this.products[index] = {
+      ...this.products[index],
+      ...updateProductDto,
+    };
+
+    return this.products[index];
   }
 
   remove(id: string) {
-    return `This action removes a #${id} product`;
+    const index = this.products.findIndex((p) => p.id === id);
+
+    if (index === -1) {
+      throw new NotFoundException(`Không tìm thấy hàng có ID ${id} để xóa!`);
+    }
+
+    this.products = this.products.filter((p) => p.id !== id);
+
+    return {
+      message: `Đã xóa thành công sản phẩm có ID: ${id}`,
+      deletedId: id,
+    };
   }
 }
