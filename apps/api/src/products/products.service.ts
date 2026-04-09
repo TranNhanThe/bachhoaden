@@ -1,62 +1,81 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { IProduct } from '@repo/shared';
-import { MOCK_PRODUCTS } from './products.mock';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Product } from './schemas/product.schema';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class ProductsService {
-  private products: IProduct[] = [...MOCK_PRODUCTS];
-  create(createProductDto: CreateProductDto) {
-    const newProduct: IProduct = {
-      id: `bh_${Date.now()}`, // Tạo ID tạm thời bằng timestamp
-      ...createProductDto,
-    };
+  constructor(
+    @InjectModel(Product.name) private productModel: Model<Product>,
+  ) {}
+  // private products: IProduct[] = [...MOCK_PRODUCTS];
 
-    this.products.push(newProduct); // Thêm vào "kho"
-    return newProduct;
-    // return { message: 'Đã thêm hàng mới vào kho!', data: createProductDto };
+  async create(createProductDto: CreateProductDto): Promise<Product> {
+    const createdProduct = new this.productModel(createProductDto);
+    return createdProduct.save(); // Dữ liệu sẽ bay thẳng vào MongoDB
   }
 
-  findAll(): IProduct[] {
-    return this.products;
+  async findAll(): Promise<any[]> {
+    const findAllProducts = await this.productModel
+      .find({ isDeleted: false })
+      .lean()
+      .exec();
+    return findAllProducts;
   }
 
-  findOne(id: string): IProduct {
-    const product = this.products.find((p) => p.id === id);
+  async findOne(id: string): Promise<Product> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Định dạng ID không hợp lệ!'); // Trả về 400 thay vì 500
+    }
+    const product = await this.productModel.findById({ _id: id, isDeleted: false }).exec();
     if (!product) throw new NotFoundException('Không tìm thấy hàng này!');
     return product;
   }
 
-  update(id: string, updateProductDto: UpdateProductDto) {
-    const index = this.products.findIndex((p) => p.id === id);
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
+    const updatedProduct = await this.productModel
+      .findByIdAndUpdate(id, updateProductDto, {
+        new: true, 
+        runValidators: true, 
+      })
+      .exec();
 
-    if (index === -1) {
+    if (!updatedProduct) {
       throw new NotFoundException(
-        `Không tìm thấy hàng có ID ${id} để cập nhật!`,
+        `Không tìm thấy sản phẩm có ID ${id} để cập nhật!`,
       );
     }
 
-    this.products[index] = {
-      ...this.products[index],
-      ...updateProductDto,
-    };
-
-    return this.products[index];
+    return updatedProduct;
   }
 
-  remove(id: string) {
-    const index = this.products.findIndex((p) => p.id === id);
-
-    if (index === -1) {
-      throw new NotFoundException(`Không tìm thấy hàng có ID ${id} để xóa!`);
+  async remove(id: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('ID không hợp lệ!');
     }
 
-    this.products = this.products.filter((p) => p.id !== id);
+    const deletedProduct = await this.productModel
+      .findByIdAndUpdate(
+        id,
+        { isDeleted: true, deletedAt: new Date() },
+        { new: true },
+      )
+      .exec();
 
-    return {
-      message: `Đã xóa thành công sản phẩm có ID: ${id}`,
-      deletedId: id,
-    };
+    if (!deletedProduct) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id} để xóa!`);
+    }
+
+    return deletedProduct;
   }
 }

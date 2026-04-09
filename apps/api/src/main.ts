@@ -7,9 +7,9 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Tự động loại bỏ các trường không có trong DTO
-      forbidNonWhitelisted: true, // Báo lỗi nếu khách gửi thêm trường lạ
-      transform: true, // Tự động chuyển đổi kiểu dữ liệu nếu có thể
+      whitelist: true, 
+      forbidNonWhitelisted: true, 
+      transform: true, 
     }),
   );
   await app.listen(process.env.PORT ?? 3001);
