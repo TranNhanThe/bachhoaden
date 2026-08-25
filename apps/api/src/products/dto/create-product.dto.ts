@@ -7,6 +7,8 @@ import {
   Min,
   Max,
   IsNotEmpty,
+  IsOptional,
+  IsInt,
 } from 'class-validator';
 export class CreateProductDto implements Omit<IProduct, 'id'> {
   @IsString({ message: 'Tên sản phẩm phải là chuỗi ký tự' })
@@ -27,18 +29,21 @@ export class CreateProductDto implements Omit<IProduct, 'id'> {
   @Min(0, { message: 'Giá không được nhỏ hơn 0' })
   price!: number;
 
-  @IsNumber()
+  @IsInt({ message: 'Số lượng phải là số nguyên' })
   @Min(0, { message: 'Số lượng không được nhỏ hơn 0' })
   quantity!: number;
 
+  @IsOptional()
   @IsString()
   description!: string;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(5)
   rating!: number;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)

@@ -18,7 +18,7 @@ export class Product extends Document {
   @Prop({ default: 0 })
   quantity!: number;
 
-  @Prop()
+  @Prop({ default: '' })
   description!: string;
 
   @Prop({ default: 0 })
@@ -32,6 +32,9 @@ export class Product extends Document {
 
   @Prop()
   deletedAt?: Date;
+
+  @Prop({ required: true, unique: true, trim: true, lowercase: true })
+  slug!: string;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

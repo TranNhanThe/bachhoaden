@@ -9,6 +9,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './schemas/product.schema';
 import { Types } from 'mongoose';
+import slugify from 'slugify';
 
 @Injectable()
 export class ProductsService {
@@ -18,8 +19,19 @@ export class ProductsService {
   // private products: IProduct[] = [...MOCK_PRODUCTS];
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    const createdProduct = new this.productModel(createProductDto);
-    return createdProduct.save(); // Dữ liệu sẽ bay thẳng vào MongoDB
+    const { item_name } = createProductDto;
+    let slug = slugify(item_name, { lower: true, locale: 'vi' });
+
+    // Kiểm tra và xử lý trùng Slug (Vòng lặp thần thánh của Saul)
+    const originalSlug = slug;
+    let counter = 1;
+    while (await this.productModel.findOne({ slug, isDeleted: false })) {
+      slug = `${originalSlug}-${counter}`;
+      counter++;
+    }
+
+    const createdProduct = new this.productModel({ ...createProductDto, slug });
+    return createdProduct.save();
   }
 
   async findAll(): Promise<any[]> {
@@ -34,8 +46,17 @@ export class ProductsService {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Định dạng ID không hợp lệ!'); // Trả về 400 thay vì 500
     }
-    const product = await this.productModel.findById({ _id: id, isDeleted: false }).exec();
+    const product = await this.productModel
+      .findById({ _id: id, isDeleted: false })
+      .exec();
     if (!product) throw new NotFoundException('Không tìm thấy hàng này!');
+    if (product.isDeleted) {
+      // if (userRole === 'admin') {
+      //   return product; // Admin vẫn thấy nhưng kèm flag isDeleted: true
+      // } else {
+      throw new NotFoundException('Không tìm thấy sản phẩm!');
+      // }
+    }
     return product;
   }
 
@@ -45,8 +66,8 @@ export class ProductsService {
   ): Promise<Product> {
     const updatedProduct = await this.productModel
       .findByIdAndUpdate(id, updateProductDto, {
-        new: true, 
-        runValidators: true, 
+        new: true,
+        runValidators: true,
       })
       .exec();
 
